@@ -6,6 +6,29 @@ const captureButton = document.getElementById('captureButton');
 const predictButton = document.getElementById('predictButton');
 const predictedLabel = document.getElementById('predictedLabel');
 
+// Initialize Chart.js for prediction graph
+const ctx = document.getElementById('predictionGraph').getContext('2d');
+const predictionChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['Soil', '1 month', '2 month', '3 month', '4 month', 'harvest'],
+        datasets: [{
+            label: 'Prediction Probability',
+            data: [0, 0, 0, 0, 0, 0],
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
 // Load the TensorFlow.js model
 async function loadModel() {
     try {
@@ -17,10 +40,12 @@ async function loadModel() {
     }
 }
 
-// Initialize the webcam
+// Initialize the webcam with constraints to use the back camera
 async function setupWebcam() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } // This requests the back camera
+        });
         webcamElement.srcObject = stream;
         return new Promise((resolve) => {
             webcamElement.onloadedmetadata = () => {
@@ -45,7 +70,7 @@ captureButton.addEventListener('click', () => {
     predictButton.classList.remove('hidden');
 });
 
-// Predict the plant condition
+// Predict the plant condition and update the graph
 predictButton.addEventListener('click', async () => {
     try {
         const img = tf.browser.fromPixels(capturedImageElement).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
@@ -53,6 +78,10 @@ predictButton.addEventListener('click', async () => {
         const classNames = ['Soil', '1 month', '2 month', '3 month', '4 month', 'harvest'];
         const maxIndex = prediction.indexOf(Math.max(...prediction));
         predictedLabel.textContent = `Plant Condition: ${classNames[maxIndex]}`;
+
+        // Update the prediction graph
+        predictionChart.data.datasets[0].data = Array.from(prediction);
+        predictionChart.update();
     } catch (error) {
         console.error("Error during prediction: ", error);
         predictedLabel.textContent = "Error during prediction. Check console for details.";
