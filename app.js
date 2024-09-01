@@ -54,29 +54,39 @@ async function setupWebcam() {
     }
 }
 
-// Function to make real-time predictions
+// Function to make real-time predictions with proper memory management
 async function predictFrame() {
-    const canvasElement = document.createElement('canvas');
-    const context = canvasElement.getContext('2d');
-    canvasElement.width = webcamElement.videoWidth;
-    canvasElement.height = webcamElement.videoHeight;
-    
-    // Draw the current video frame to the canvas
-    context.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
+    try {
+        const canvasElement = document.createElement('canvas');
+        const context = canvasElement.getContext('2d');
+        canvasElement.width = webcamElement.videoWidth;
+        canvasElement.height = webcamElement.videoHeight;
+        
+        // Draw the current video frame to the canvas
+        context.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
 
-    // Make predictions using the captured frame from the video
-    const img = tf.browser.fromPixels(canvasElement).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
-    const prediction = await model.predict(img).data();
-    const classNames = ['Soil', '1 month', '2 month', '3 month', '4 month', 'harvest'];
-    const maxIndex = prediction.indexOf(Math.max(...prediction));
-    
-    // Update the predicted label and graph
-    predictedLabel.textContent = `Plant Condition: ${classNames[maxIndex]}`;
-    predictionChart.data.datasets[0].data = Array.from(prediction);
-    predictionChart.update();
+        // Make predictions using the captured frame from the video
+        const img = tf.browser.fromPixels(canvasElement).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
+        
+        // Predict and update UI
+        const prediction = await model.predict(img).data();
+        const classNames = ['Soil', '1 month', '2 month', '3 month', '4 month', 'harvest'];
+        const maxIndex = prediction.indexOf(Math.max(...prediction));
+        
+        // Update the predicted label and graph
+        predictedLabel.textContent = `Plant Condition: ${classNames[maxIndex]}`;
+        predictionChart.data.datasets[0].data = Array.from(prediction);
+        predictionChart.update();
 
-    // Request the next frame prediction
-    requestAnimationFrame(predictFrame);
+        // Dispose of the tensor to prevent memory leaks
+        img.dispose();
+    } catch (error) {
+        console.error("Error during prediction: ", error);
+        predictedLabel.textContent = "Error during prediction. Check console for details.";
+    } finally {
+        // Request the next frame prediction
+        requestAnimationFrame(predictFrame);
+    }
 }
 
 // Load the model, setup the webcam, and start the real-time predictions
