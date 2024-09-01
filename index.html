@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Growth Monitoring</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Load TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Plant Growth Monitoring</h1>
+        <video id="webcam" autoplay playsinline></video>
+        <button id="captureButton">Capture Image</button>
+        <div id="predictedLabel">Plant Condition: </div>
+        <canvas id="canvas" class="hidden"></canvas>
+        <img id="capturedImage" class="hidden" alt="Captured Image">
+        <button id="predictButton" class="hidden">Predict Condition</button>
+    </div>
+</body>
+</html>
