@@ -1,15 +1,9 @@
 let model;
 const webcamElement = document.getElementById('webcam');
-const canvasElement = document.getElementById('canvas');
-const capturedImageElement = document.getElementById('capturedImage');
-const captureButton = document.getElementById('captureButton');
-const predictButton = document.getElementById('predictButton');
 const predictedLabel = document.getElementById('predictedLabel');
 
 // Initialize Chart.js for prediction graph
-const ctx = document.createElement('canvas');  // Create a new canvas for the graph
-ctx.id = 'predictionGraph';  // Assign an ID for reference
-document.querySelector('.prediction-container').insertBefore(ctx, capturedImageElement);  // Insert before the captured image
+const ctx = document.getElementById('predictionGraph').getContext('2d');
 const predictionChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -60,39 +54,32 @@ async function setupWebcam() {
     }
 }
 
-// Capture image from webcam
-captureButton.addEventListener('click', () => {
+// Function to make real-time predictions
+async function predictFrame() {
+    const canvasElement = document.createElement('canvas');
     const context = canvasElement.getContext('2d');
     canvasElement.width = webcamElement.videoWidth;
     canvasElement.height = webcamElement.videoHeight;
+    
+    // Draw the current video frame to the canvas
     context.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
+
+    // Make predictions using the captured frame from the video
+    const img = tf.browser.fromPixels(canvasElement).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
+    const prediction = await model.predict(img).data();
+    const classNames = ['Soil', '1 month', '2 month', '3 month', '4 month', 'harvest'];
+    const maxIndex = prediction.indexOf(Math.max(...prediction));
     
-    // Convert the canvas to a data URL and set it as the src of the captured image element
-    const dataUrl = canvasElement.toDataURL('image/png');
-    capturedImageElement.src = dataUrl;  // Update the src of the image element
-    capturedImageElement.classList.remove('hidden');  // Ensure the image element is visible
-    predictButton.classList.remove('hidden');
-    
-    console.log("Image captured and displayed.");  // Log for debugging
+    // Update the predicted label and graph
+    predictedLabel.textContent = `Plant Condition: ${classNames[maxIndex]}`;
+    predictionChart.data.datasets[0].data = Array.from(prediction);
+    predictionChart.update();
+
+    // Request the next frame prediction
+    requestAnimationFrame(predictFrame);
+}
+
+// Load the model, setup the webcam, and start the real-time predictions
+loadModel().then(() => setupWebcam()).then(() => {
+    predictFrame();  // Start real-time prediction loop
 });
-
-// Predict the plant condition and update the graph
-predictButton.addEventListener('click', async () => {
-    try {
-        const img = tf.browser.fromPixels(capturedImageElement).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
-        const prediction = await model.predict(img).data();
-        const classNames = ['Soil', '1 month', '2 month', '3 month', '4 month', 'harvest'];
-        const maxIndex = prediction.indexOf(Math.max(...prediction));
-        predictedLabel.textContent = `Plant Condition: ${classNames[maxIndex]}`;
-
-        // Update the prediction graph
-        predictionChart.data.datasets[0].data = Array.from(prediction);
-        predictionChart.update();
-    } catch (error) {
-        console.error("Error during prediction: ", error);
-        predictedLabel.textContent = "Error during prediction. Check console for details.";
-    }
-});
-
-// Load the model and setup webcam
-loadModel().then(setupWebcam);
