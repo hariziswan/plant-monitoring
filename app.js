@@ -7,7 +7,9 @@ const predictButton = document.getElementById('predictButton');
 const predictedLabel = document.getElementById('predictedLabel');
 
 // Initialize Chart.js for prediction graph
-const ctx = document.getElementById('predictionGraph').getContext('2d');
+const ctx = document.createElement('canvas');  // Create a new canvas for the graph
+ctx.id = 'predictionGraph';  // Assign an ID for reference
+document.querySelector('.prediction-container').insertBefore(ctx, capturedImageElement);  // Insert before the captured image
 const predictionChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -44,7 +46,7 @@ async function loadModel() {
 async function setupWebcam() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: 'environment' } // This requests the back camera
+            video: { facingMode: 'environment' }  // Request the back camera
         });
         webcamElement.srcObject = stream;
         return new Promise((resolve) => {
@@ -64,10 +66,14 @@ captureButton.addEventListener('click', () => {
     canvasElement.width = webcamElement.videoWidth;
     canvasElement.height = webcamElement.videoHeight;
     context.drawImage(webcamElement, 0, 0, canvasElement.width, canvasElement.height);
+    
+    // Convert the canvas to a data URL and set it as the src of the captured image element
     const dataUrl = canvasElement.toDataURL('image/png');
-    capturedImageElement.src = dataUrl;
-    capturedImageElement.classList.remove('hidden');
+    capturedImageElement.src = dataUrl;  // Update the src of the image element
+    capturedImageElement.classList.remove('hidden');  // Ensure the image element is visible
     predictButton.classList.remove('hidden');
+    
+    console.log("Image captured and displayed.");  // Log for debugging
 });
 
 // Predict the plant condition and update the graph
